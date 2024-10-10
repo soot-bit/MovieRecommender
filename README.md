@@ -1,7 +1,7 @@
 
 # Recommender System
 
-This repository contains a recommender system implemented in Python using NumPy. The system employs collaborative filtering techniques to generate personalized recommendations based on user-item interaction data.
+This repository contains a recommender system implemented using NumPy. The system uses collaborative filtering techniques to generate personalized recommendations based on user-item interaction data.
 
 
 ## Features
@@ -16,24 +16,11 @@ This repository contains a recommender system implemented in Python using NumPy.
 To set up the recommender system, follow these steps:
 
 1. **Clone the repository:**
-
-   ```
-
-## Usage
-
- coming soon ..
-
-
-
-
-4. **Train the model:**
-
-
-5. **Make predictions:**
+2. **Train the model:**
+3. **Make predictions:**
 
 
    
-
 ## File Structure
 
 ```
