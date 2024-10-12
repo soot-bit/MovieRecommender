@@ -24,15 +24,36 @@ To set up the recommender system, follow these steps:
 ## File Structure
 
 ```
-recommender-system/
+MovieRecommender/
 │
-├── recommender.py     # Main implementation of the recommender system
-├── data.py            # Data handling and processing (if applicable)
-├── requirements.txt    # List of required packages
-└── README.md          # This README file
+├── src/                   
+│   ├── cpp/                 # C++/CUDA backend 
+│   │   ├── recommender.cpp  # Core recommendation logic (training + inference)
+│   │   ├── recommender.hpp  # Header file with declarations
+│   │   ├── recommender.cu   # CUDA code for acceleration (optional)
+│   │   └── Makefile         
+│   ├── jax/                 # JAX implementation
+│   │   ├── recommender_jax.py 
+│   │   └── utils.py         
+│   ├── bindings/          
+│   │   ├── recommender_pybind.cpp 
+│   │   └── setup.py        
+│   └── common/              # Shared utilities 
+│       ├── data_loader.py  
+│       └── config.py        
+│
+├── main/                  # Main 
+│   ├── train.py           
+│   ├── recommend.py       
+│   ├── benchmark.py       #  C++/CUDA vs JAX
+│   └── config.py         
+│
+├── Data/                # Movie data and model storage
+│   ├── 100k.csv         
+│   ├── 25M.csv        
+│   └── model/            
+│
+└── README.md             
 ```
 
 
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
