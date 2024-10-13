@@ -1,4 +1,4 @@
-from src.py.vanilla.trainer import Trainer
+from src.trainer import Trainer
 from src.py.vanilla.als import ALSModel
 
 

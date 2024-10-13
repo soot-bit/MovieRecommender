@@ -9,7 +9,7 @@ from pathlib import Path
 
 class DataLoader:
     def __init__(self, dataset):
-        self.ds_dir = Path("Data/ds100k")
+        self.ds_dir = Path("Data") / dataset
         self.usr_to_idx = {}
         self.idx_to_usr = []
         self.movie_to_idx = {}
@@ -39,30 +39,32 @@ class DataLoader:
         for row in ratings_arr:
             usr, movie, rating = row
             if usr not in self.usr_to_idx:
+                usr = int(usr)
                 self.usr_to_idx[usr] = len(self.usr_to_idx)
                 self.idx_to_usr.append(usr)
             if movie not in self.movie_to_idx:
+                movie = int(movie)
                 self.movie_to_idx[movie] = len(self.movie_to_idx)
                 self.idx_to_movie.append(movie)
 
         num_users = len(self.idx_to_usr)
         num_movies = len(self.idx_to_movie)
-        user_train = [[] for _ in range(num_users)]
-        movie_train = [[] for _ in range(num_movies)]
-        user_test = [[] for _ in range(num_users)]
-        movie_test = [[] for _ in range(num_movies)]
+        self.user_train = [[] for _ in range(num_users)]
+        self.movie_train = [[] for _ in range(num_movies)]
+        self.user_test = [[] for _ in range(num_users)]
+        self.movie_test = [[] for _ in range(num_movies)]
 
         
         for index, (usr, movie, rating) in enumerate(ratings_arr):
             usr_idx = self.usr_to_idx[usr]
             movie_idx = self.movie_to_idx[movie]
             if index < split_point:
-                user_train[usr_idx].append((movie_idx, float(rating)))
-                movie_train[movie_idx].append((usr_idx, float(rating)))
+                self.user_train[usr_idx].append((movie_idx, float(rating)))
+                self.movie_train[movie_idx].append((usr_idx, float(rating)))
             else:
-                user_test[usr_idx].append((movie_idx, float(rating)))
-                movie_test[movie_idx].append((usr_idx, float(rating)))
-        return user_train, user_test, movie_train, movie_test
+                self.user_test[usr_idx].append((movie_idx, float(rating)))
+                self.movie_test[movie_idx].append((usr_idx, float(rating)))
+
 
     def _process_features(self):
         """Processes movie features"""
