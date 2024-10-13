@@ -144,10 +144,3 @@ class Trainor:
             print( "\t", i+1, mov_title_dict[movie[0]], flush=True)
             time.sleep(0.5)
 
-    def _reset(self):
-        self.user_matrix = np.random.normal(0, 1/np.sqrt(self.latent_d), size=(len(self.user_data), self.latent_d))
-        self.item_matrix = np.random.normal(0, 1/np.sqrt(self.latent_d), size=(len(self.item_data), self.latent_d))
-        self.user_bias = np.zeros((len(self.user_data)))
-        self.item_bias = np.zeros((len(self.item_data)))
-        self.rmse_test = []
-        self.rmse = []
