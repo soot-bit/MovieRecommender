@@ -4,7 +4,7 @@ class ALSModel:
     """ Matrix Factorisation using ALS algorithm """
     def __init__(self, user_data, item_data, latent_d=5, lamda=0.001, tau=0.01, gamma=0.001):
         self.user_data = user_data
-        self.item_data = item_data
+        self.item_data = item_data     ## pass this instead
         
         self.lamda = lamda
         self.tau = tau
@@ -13,7 +13,7 @@ class ALSModel:
 
 
         # Initialise latent matrices and biases
-        self.user_matrix = np.random.normal(0, 1/np.sqrt(latent_d), size=(len(self.user_data), latent_d))
+        self.user_matrix = np.random.normal(0, 1/np.sqrt(latent_d), size=(len(self.user_data), latent_d)) ## dataloader
         self.item_matrix = np.random.normal(0, 1/np.sqrt(latent_d), size=(len(self.item_data), latent_d))
         self.user_bias = np.zeros((len(self.user_data)))
         self.item_bias = np.zeros((len(self.item_data)))

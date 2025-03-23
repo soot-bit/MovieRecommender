@@ -3,10 +3,6 @@ import numpy as np
 from pathlib import Path
 
 
-
-
-
-
 class DataLoader:
     def __init__(self, dataset):
         self.ds_dir = Path("Data") / dataset
