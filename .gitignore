@@ -1,3 +1,17 @@
 Data/
 **/__pycache__
-debugg.ipynb
+debugg.ipynbData/
+Report/
+.vscode/
+
+
+# Python bytecode files
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+.venv/
+
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
