@@ -1,17 +1,13 @@
-#!/bin/bash
-
 mkdir -p Data
 
-echo "📥"
-curl -L https://files.grouplens.org/datasets/movielens/ml-latest-small.zip -o Data/ml-latest-small.zip
-curl -L https://files.grouplens.org/datasets/movielens/ml-latest.zip -o Data/ml-latest.zip
-
+echo "📥 Downloading..."
+axel -n 2 -o Data/ https://files.grouplens.org/datasets/movielens/ml-latest-small.zip
+axel -n 20 -o Data/ https://files.grouplens.org/datasets/movielens/ml-latest.zip
 
 echo "Extracting... 📂"
-unzip Data/*.zip -d Data
+find Data/ -name "*.zip" -exec unzip {} -d Data/ \;
 
-
-echo "༄🧹"
+echo "༄🧹 Cleaning up..."
 rm Data/*.zip
 
-echo "👍"
+echo "👍 Done"
