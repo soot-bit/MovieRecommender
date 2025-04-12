@@ -4,6 +4,7 @@ Report/
 debugg.ipynbData/
 Report/
 .vscode/
+test*
 
 
 # Python bytecode files
