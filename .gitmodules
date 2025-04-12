@@ -1,3 +1,6 @@
 [submodule "src/external/indicators"]
 	path = src/external/indicators
 	url = https://github.com/p-ranav/indicators.git
+[submodule "src/external/xtensor"]
+	path = src/external/xtensor
+	url = https://github.com/xtensor-stack/xtensor.git
