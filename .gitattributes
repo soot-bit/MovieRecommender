@@ -1,0 +1,5 @@
+Data/ml-latest/tags.csv filter=lfs diff=lfs merge=lfs -text
+Data/ml-latest/README.txt filter=lfs diff=lfs merge=lfs -text
+Data/ml-latest/links.csv filter=lfs diff=lfs merge=lfs -text
+Data/ml-latest/movies.csv filter=lfs diff=lfs merge=lfs -text
+Data/ml-latest/ratings.csv filter=lfs diff=lfs merge=lfs -text
