@@ -1,0 +1,3 @@
+[submodule "src/external/indicators"]
+	path = src/external/indicators
+	url = https://github.com/p-ranav/indicators.git
