@@ -77,8 +77,12 @@ to download the the 25 Million Users large data set run
 ```bash
 $ > ./download_ds.sh
 ```
-
-
+example usage
+```
+time python main.py  --dataset "ml-latest-small"
+```
+add flag `--flash` for flash training. you might not think anything happened but it did train
+add flag `---plot` to confirm if indead it did exectute.
 
 
 <div align="center">
@@ -103,11 +107,11 @@ recommendations = model.predict(user_id=42, top_k=10)
 
 ###  Benchmarks
 
-| Operation         | Pure Python 🐢 | Numpy | Flash System ⚡| |
+| Operation         |  Python 🐢 + Numpy | Flash System ⚡| |
 |---|---|---|----| --- |
-| Matrix Factorization | 12.4s         | ns| **0.8s**   |   ***x150***    |
-| Recommendation Batch | 4.2min        | ns | **9.8s**   |    **25.7x** |
-
+| Matrix Factorization |  -   |  -   |   ***x100.1 boost***    |
+| Recommendation Batch |  -    | -  |    **2005.7x** |
+*to be done properly*
 ---
 
 ![trainloss](results/100ktrain.png)
