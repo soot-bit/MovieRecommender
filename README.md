@@ -57,19 +57,17 @@ The Flash Recommender System is a high-performance, scalable recommendation engi
 
 ## Features
 - Compiled with Clang LLVM’s optimisations - aggressive inlining, loop unrolling, auto-vectorisation, ... 
-
-- Uses Eigen, a highly optimised library for matrix algebra — fast Cholesky decomposition and other linear algebra routines.
-
+- cpp backend uses Eigen, a highly optimised library for matrix algebra — fast Cholesky decomposition and other linear algebra routines.
 - Integrates xtensor for custom array structures with seamless Python interoperability.
-
 - OpenMP threading for parallelism, enabling shared-memory multithreading with dynamic workload balancing.
 
 
 ## Installation
-
+**🏗️ CLI UI still under construction**  
 To set up the recommender system, follow these steps:
 
 1. **Clone the repository:**
+2. run `$ source build.sh`
 2. **Train the model or load trained matrices and vectors for making predictions:**
 3. **Make predictions:**
 
@@ -85,9 +83,9 @@ $ > ./download_ds.sh
 
 <div align="center">
 
-### 🚀 Performance Highlights
 
 
+<!-- 
 `pip install flash-rec --upgrade`
 
 
@@ -97,13 +95,13 @@ import flash_rec as fr
 
 # Blazing-fast recommendations in 3 lines!
 model = fr.HyperEngine()
-model.train(lightning_mode=True)
+model.train(lightning_mode=True) ## uses cpp backend
 recommendations = model.predict(user_id=42, top_k=10)
 
-```
+``` -->
 
 
-### ⚡ Benchmark Showdown
+###  Benchmarks
 
 | Operation         | Pure Python 🐢 | Numpy | Flash System ⚡| |
 |---|---|---|----| --- |
@@ -112,28 +110,31 @@ recommendations = model.predict(user_id=42, top_k=10)
 
 ---
 
+![trainloss](results/100ktrain.png)
 
 <details>
 <summary><h3>🧠 ALS algorithm</h3></summary>
   
 
 - **Alternating Updates**: Update $U \rightarrow V \rightarrow b_i \rightarrow b_j$ iteratively.
-1. **User Vector $u_i$:**
+ 
+ **User Vector $u_i$:**
+
    $$
    u_i = \left( \lambda \sum_{j \in \Omega(i)} v_j v_j^T + \tau I \right)^{-1} \left( \lambda \sum_{j \in \Omega(i)} (r_{ij} - b_i - b_j) v_j \right)
    $$
 
-2. **Movie Vector $v_j$:**
+   **Movie Vector $v_j$:**
    $$
    v_j = \left( \lambda \sum_{i \in {\Omega}^{-1}(j)} u_i u_i^T + \tau I \right)^{-1} \left( \lambda \sum_{i \in {\Omega}^{-1}(j)} (r_{ij} - b_i - b_j) u_i \right)
    $$
 
-3. **User Bias $b_i$:**
+   **User Bias $b_i$:**
    $$
    b_i = \frac{\lambda \sum_{j \in \Omega(i)} \left(r_{ij} - u_i^T v_j - b_j\right)}{\lambda |\Omega(i)| + \gamma}
    $$
 
-4. **Movie Bias $b_j$:**
+  **Movie Bias $b_j$:**
    $$
    b_j = \frac{\lambda \sum_{i \in {\Omega}^{-1}(j)} \left(r_{ij} - u_i^T v_j - b_i\right)}{\lambda |{\Omega}^{-1}(j)| + \gamma}
    $$
