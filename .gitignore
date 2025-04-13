@@ -1,4 +1,7 @@
 Data/
+!Data/ml-latest-small/
+!Data/ml-latest-small/*
+
 Report/
 **/__pycache__
 debugg.ipynbData/
