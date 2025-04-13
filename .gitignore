@@ -13,7 +13,7 @@ test*
 *.pyd
 __pycache__/
 .venv/
-
+build/
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
