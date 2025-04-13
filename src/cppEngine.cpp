@@ -19,37 +19,37 @@ namespace py = pybind11;
 namespace ind = indicators;
 
 //------------------------------------------
-//      Data Structure for Training
+//      a Dstructure used for training
 //------------------------------------------
 
 struct snapTensor {
-    std::vector<std::vector<std::tuple<int, float>>> train_user;
-    std::vector<std::vector<std::tuple<int, float>>> train_item;
-    std::vector<std::vector<std::tuple<int, float>>> test_user;
-    std::vector<std::vector<std::tuple<int, float>>> test_item;
+    std::vector<std::vector<std::tuple<int, float>>> user_train;
+    std::vector<std::vector<std::tuple<int, float>>> movie_train;
+    std::vector<std::vector<std::tuple<int, float>>> user_test;
+    std::vector<std::vector<std::tuple<int, float>>> movie_test;
 
-    const int num_users, num_items
+    int   uniq_users, uniq_items;
 
     void reshape(int n_users, int n_items) {
-        train_user.resize(n_users);
-        test_user.resize(n_users);
-        train_item.resize(n_items);
-        test_item.resize(n_items);
+        user_train.resize(n_users);
+        user_test.resize(n_users);
+        movie_train.resize(n_items);
+        movie_test.resize(n_items);
     }
 
     void add_train(int user, int item, float rating) {
-        train_user[user].emplace_back(item, rating);
-        train_item[item].emplace_back(user, rating);
+        user_train[user].emplace_back(item, rating);
+        movie_train[item].emplace_back(user, rating);
     }
 
     void add_test(int user, int item, float rating) {
-        test_user[user].emplace_back(item, rating);
-        test_item[item].emplace_back(user, rating);
+        user_test[user].emplace_back(item, rating);
+        movie_test[item].emplace_back(user, rating);
     }
 };
 
 //------------------------------------------
-//                  ALS
+//                  ALS Alg
 //------------------------------------------
 
 struct Metrics {
@@ -62,19 +62,19 @@ struct Metrics {
 class ALS {
 private:
     int dim;
-    float lambda_, tau_, gamma_;
+    float lambda_, tau, gamma;
     Eigen::MatrixXf user_factors;
     Eigen::MatrixXf item_factors;
     Eigen::VectorXf user_bias;
     Eigen::VectorXf item_bias;
 
     void update_users(const snapTensor& data) {
-        const auto& train_user = data.train_user;
-        const size_t num_users = train_user.size();
+        const auto& user_train = data.user_train;
+        const size_t num_users = user_train.size();
         
         #pragma omp parallel for schedule(dynamic)
         for(size_t u = 0; u < num_users; ++u) {
-            const auto& ratings = train_user[u];
+            const auto& ratings = user_train[u];
             if(ratings.empty()) continue;
     
             const size_t n_ratings = ratings.size();
@@ -92,15 +92,14 @@ private:
     
             // Phase 1: Update user bias
             const Eigen::VectorXf current_pred = V * user_factors.row(u).transpose() 
-                                               + user_bias[u] * Eigen::VectorXf::Ones(n_ratings) 
                                                + item_b;
             const float new_bias = (lambda_ * (r - current_pred).sum()) 
-                                 / (lambda_ * n_ratings + gamma_);
+                                 / (lambda_ * n_ratings + gamma);
             user_bias[u] = new_bias;
     
             // Phase 2: Update user factors 
             const Eigen::VectorXf residuals = r - Eigen::VectorXf::Constant(n_ratings, user_bias[u]) - item_b;
-            const Eigen::MatrixXf A = lambda_ * V.transpose() * V + tau_ * Eigen::MatrixXf::Identity(dim, dim);
+            const Eigen::MatrixXf A = lambda_ * V.transpose() * V + tau * Eigen::MatrixXf::Identity(dim, dim);
             const Eigen::VectorXf b = lambda_ * V.transpose() * residuals;
     
             //  Cholesky decomposition to stabilise inverstion
@@ -110,12 +109,12 @@ private:
     }
     
     void update_items(const snapTensor& data) {
-        const auto& train_item = data.train_item;
-        const size_t num_items = train_item.size();
+        const auto& movie_train = data.movie_train;
+        const size_t num_items = movie_train.size();
         
         #pragma omp parallel for schedule(dynamic)
         for(size_t i = 0; i < num_items; ++i) {
-            const auto& ratings = train_item[i];
+            const auto& ratings = movie_train[i];
             if(ratings.empty()) continue;
     
             const size_t n_ratings = ratings.size();
@@ -133,18 +132,17 @@ private:
     
             // Phase 1: Update item bias
             const Eigen::VectorXf current_pred = U * item_factors.row(i).transpose() 
-                                               + item_bias[i] * Eigen::VectorXf::Ones(n_ratings) 
                                                + user_b;
             const float new_bias = (lambda_ * (r - current_pred).sum()) 
-                                 / (lambda_ * n_ratings + gamma_);
+                                 / (lambda_ * n_ratings + gamma);
             item_bias[i] = new_bias;
     
             // Phase 2: Update item factors (using updated bias)
             const Eigen::VectorXf residuals = r - user_b - Eigen::VectorXf::Constant(n_ratings, item_bias[i]);
-            const Eigen::MatrixXf A = lambda_ * U.transpose() * U + tau_ * Eigen::MatrixXf::Identity(dim, dim);
+            const Eigen::MatrixXf A = lambda_ * U.transpose() * U + tau * Eigen::MatrixXf::Identity(dim, dim);
             const Eigen::VectorXf b = lambda_ * U.transpose() * residuals;
     
-            // Use Cholesky decomposition to match Python
+            //  Cholesky decomposition inversion
             Eigen::LLT<Eigen::MatrixXf> solver(A);
             item_factors.row(i) = solver.solve(b).transpose();
         }
@@ -154,9 +152,9 @@ private:
         float train_loss = 0.0f, test_loss = 0.0f;
         size_t train_count = 0, test_count = 0;
 
-        // Training metrics
-        for(size_t u = 0; u < data.train_user.size(); ++u) {
-            for(const auto& [i, r] : data.train_user[u]) {
+        //  metrics
+        for(size_t u = 0; u < data.user_train.size(); ++u) {
+            for(const auto& [i, r] : data.user_train[u]) {
                 const float pred = user_factors.row(u).dot(item_factors.row(i)) + user_bias[u] + item_bias[i];
                 const float error = r - pred;
                 train_loss += error * error;
@@ -164,9 +162,8 @@ private:
             }
         }
 
-        // Test metrics
-        for(size_t u = 0; u < data.test_user.size(); ++u) {
-            for(const auto& [i, r] : data.test_user[u]) {
+        for(size_t u = 0; u < data.user_test.size(); ++u) {
+            for(const auto& [i, r] : data.user_test[u]) {
                 const float pred = user_factors.row(u).dot(item_factors.row(i)) + user_bias[u] + item_bias[i];
                 const float error = r - pred;
                 test_loss += error * error;
@@ -174,9 +171,9 @@ private:
             }
         }
 
-        // Regularization terms
-        const float reg_loss = 0.5f * tau_ * (user_factors.squaredNorm() + item_factors.squaredNorm())
-                             + 0.5f * gamma_ * (user_bias.squaredNorm() + item_bias.squaredNorm());
+        //loss
+        const float reg_loss = 0.5f * tau * (user_factors.squaredNorm() + item_factors.squaredNorm())
+                             + 0.5f * gamma * (user_bias.squaredNorm() + item_bias.squaredNorm());
 
         return Metrics(
             train_loss + reg_loss,
@@ -195,8 +192,8 @@ private:
     }
 
 public:
-    ALS(int dim, float lambda, float tau, float gamma)
-        : dim(dim), lambda_(lambda), tau_(tau), gamma_(gamma) {}
+    ALS(int dim, float lambda_, float tau, float gamma)
+        : dim(dim), lambda_(lambda_), tau(tau), gamma(gamma) {}
 
         void initialize(int num_users, int num_items) {
             const float std_dev = 1.0f / std::sqrt(dim);
@@ -216,7 +213,7 @@ public:
         }
 
     std::vector<Metrics> fit(const snapTensor& data, int epochs = 10) {
-        initialize(data.train_user.size(), data.train_item.size());
+        initialize(data.user_train.size(), data.movie_train.size());
         std::vector<Metrics> history;
         
         ind::ProgressBar bar{
@@ -255,15 +252,17 @@ PYBIND11_MODULE(cppEngine, m) {
         .def("reshape", &snapTensor::reshape)
         .def("add_train", &snapTensor::add_train)
         .def("add_test", &snapTensor::add_test)
-        .def_readwrite("train_user", &snapTensor::train_user)
-        .def_readwrite("train_item", &snapTensor::train_item)
-        .def_readwrite("test_user", &snapTensor::test_user)
-        .def_readwrite("test_item", &snapTensor::test_item);
+        .def_readwrite("uniq_users", &snapTensor::uniq_users)
+        .def_readwrite("uniq_items", &snapTensor::uniq_items)
+        .def_readwrite("user_train", &snapTensor::user_train)
+        .def_readwrite("movie_train", &snapTensor::movie_train)
+        .def_readwrite("user_test", &snapTensor::user_test)
+        .def_readwrite("movie_test", &snapTensor::movie_test);
 
     py::class_<ALS>(m, "ALS")
         .def(py::init<int, float, float, float>(),
             py::arg("dim"),
-            py::arg("lambda"),
+            py::arg("lambda_"),
             py::arg("tau"),
             py::arg("gamma")
         )
