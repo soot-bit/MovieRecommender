@@ -9,14 +9,7 @@ class Trainer:
         self.tau = tau
         self.gamma = gamma
 
-        self.loss_history = []
-        self.rmse_history = []
-        self.loss_test_history = []
-        self.rmse_test_history = []
-        self._setup()
-    
-    def _setup(self):
-        self.data.tt_split()
+        self.train_metrics = []
 
     def fit(self, model, epochs=20):
         self.model = model(self.data.user_train, self.data.movie_train, self.latent_d, self.lamda, self.tau, self.gamma)
@@ -30,32 +23,6 @@ class Trainer:
             self.rmse_history.append(r)
             self.loss_test_history.append(l_test)
             self.rmse_test_history.append(r_test)
-            print(f'Epoch: {epoch + 1}-Loss: {l:.5f}  |  RMSE Train: {r:.5f}  |  RMSE Test: {r_test:.5f}')
-        return self.model
+            print(f'Epoch: {epoch + 1}, RMSE Train: {r}, RMSE Test: {r_test}')
 
-    def calculate_loss(self, usr_data):
-        loss = self.l2_loss()
-        rmse, count = self.calculate_rmse(usr_data)
-        return loss, np.sqrt(rmse / count)
 
-    def l2_loss(self):
-        reg_loss = (self.gamma / 2) * (np.dot(self.model.item_bias, self.model.item_bias) + np.dot(self.model.user_bias, self.model.user_bias))
-
-        for n in range(len(self.model.item_matrix)):
-            reg_loss += (self.tau / 2) * np.dot(self.model.item_matrix[n, :], self.model.item_matrix[n, :])
-        
-        for m in range(len(self.model.user_matrix)):
-            reg_loss += (self.tau / 2) * np.dot(self.model.user_matrix[m, :], self.model.user_matrix[m, :])
-
-        return reg_loss
-
-    def calculate_rmse(self, data):
-        rmse = 0
-        count = 0
-        for user_index in range(len(data)):
-            for item_index, rating in data[user_index]:
-                error = (rating - (np.dot(self.model.user_matrix[user_index, :], self.model.item_matrix[item_index, :]) +
-                                   self.model.user_bias[user_index] + self.model.item_bias[item_index])) ** 2
-                rmse += error
-                count += 1
-        return rmse, count

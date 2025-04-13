@@ -28,6 +28,8 @@ struct snapTensor {
     std::vector<std::vector<std::tuple<int, float>>> test_user;
     std::vector<std::vector<std::tuple<int, float>>> test_item;
 
+    const int num_users, num_items
+
     void reshape(int n_users, int n_items) {
         train_user.resize(n_users);
         test_user.resize(n_users);
@@ -74,19 +76,20 @@ private:
         for(size_t u = 0; u < num_users; ++u) {
             const auto& ratings = train_user[u];
             if(ratings.empty()) continue;
-
+    
             const size_t n_ratings = ratings.size();
             Eigen::VectorXf r(n_ratings);
             Eigen::MatrixXf V(n_ratings, dim);
             Eigen::VectorXf item_b(n_ratings);
-
+    
+            // Populate r, V, and item_b
             for(size_t i = 0; i < n_ratings; ++i) {
                 const auto& [item, rating] = ratings[i];
                 r[i] = rating;
                 V.row(i) = item_factors.row(item);
                 item_b[i] = item_bias[item];
             }
-
+    
             // Phase 1: Update user bias
             const Eigen::VectorXf current_pred = V * user_factors.row(u).transpose() 
                                                + user_bias[u] * Eigen::VectorXf::Ones(n_ratings) 
@@ -94,17 +97,18 @@ private:
             const float new_bias = (lambda_ * (r - current_pred).sum()) 
                                  / (lambda_ * n_ratings + gamma_);
             user_bias[u] = new_bias;
-
-            // Phase 2: Update user factors
+    
+            // Phase 2: Update user factors 
             const Eigen::VectorXf residuals = r - Eigen::VectorXf::Constant(n_ratings, user_bias[u]) - item_b;
             const Eigen::MatrixXf A = lambda_ * V.transpose() * V + tau_ * Eigen::MatrixXf::Identity(dim, dim);
             const Eigen::VectorXf b = lambda_ * V.transpose() * residuals;
-
-            Eigen::LDLT<Eigen::MatrixXf> solver(A);
+    
+            //  Cholesky decomposition to stabilise inverstion
+            Eigen::LLT<Eigen::MatrixXf> solver(A);
             user_factors.row(u) = solver.solve(b).transpose();
         }
     }
-
+    
     void update_items(const snapTensor& data) {
         const auto& train_item = data.train_item;
         const size_t num_items = train_item.size();
@@ -113,19 +117,20 @@ private:
         for(size_t i = 0; i < num_items; ++i) {
             const auto& ratings = train_item[i];
             if(ratings.empty()) continue;
-
+    
             const size_t n_ratings = ratings.size();
             Eigen::VectorXf r(n_ratings);
             Eigen::MatrixXf U(n_ratings, dim);
             Eigen::VectorXf user_b(n_ratings);
-
+    
+            // Populate r, U, and user_b
             for(size_t j = 0; j < n_ratings; ++j) {
                 const auto& [user, rating] = ratings[j];
                 r[j] = rating;
                 U.row(j) = user_factors.row(user);
                 user_b[j] = user_bias[user];
             }
-
+    
             // Phase 1: Update item bias
             const Eigen::VectorXf current_pred = U * item_factors.row(i).transpose() 
                                                + item_bias[i] * Eigen::VectorXf::Ones(n_ratings) 
@@ -133,13 +138,14 @@ private:
             const float new_bias = (lambda_ * (r - current_pred).sum()) 
                                  / (lambda_ * n_ratings + gamma_);
             item_bias[i] = new_bias;
-
-            // Phase 2: Update item factors
+    
+            // Phase 2: Update item factors (using updated bias)
             const Eigen::VectorXf residuals = r - user_b - Eigen::VectorXf::Constant(n_ratings, item_bias[i]);
             const Eigen::MatrixXf A = lambda_ * U.transpose() * U + tau_ * Eigen::MatrixXf::Identity(dim, dim);
             const Eigen::VectorXf b = lambda_ * U.transpose() * residuals;
-
-            Eigen::LDLT<Eigen::MatrixXf> solver(A);
+    
+            // Use Cholesky decomposition to match Python
+            Eigen::LLT<Eigen::MatrixXf> solver(A);
             item_factors.row(i) = solver.solve(b).transpose();
         }
     }
@@ -228,8 +234,9 @@ public:
         };
 
         for(int iter = 0; iter < epochs; ++iter) {
-            update_users(data);
+            
             update_items(data);
+            update_users(data);
             
             Metrics metrics = compute_metrics(data);
             history.push_back(metrics);

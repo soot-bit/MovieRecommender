@@ -1,18 +1,18 @@
-from src.trainer import Trainer
-from src.py.vanilla.als import ALSModel
-
+from src.data import SnapIndex as Indx
+from build import cppEngine
 
 def main():
-    trainer = Trainer()
+    # Load and prepare data
+    si = Indx(dataset="ml-latest-small")
+    tensor = si.prepare_tensor()
+    
+    # Initialize and train model
+    model = cppEngine.ALS(dim=64, reg=0.1, bias_reg=0.01, factor_reg=0.01)
+    history = model.fit(tensor, iterations=20)
+    
+    # Show results
+    print("\nTraining complete!")
+    print(f"Final Test RMSE: {history[-1].test_rmse:.4f}")
 
-    epochs = 20
-    model = trainer.fit(ALSModel, epochs)
-
-    user_id = 1  
-    movie_id = 10 
-    predicted_rating = model.predict(user_id, movie_id)
-
-    print(f"Predicted rating for User {user_id} on Movie {movie_id}: {predicted_rating:.2f}")
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
