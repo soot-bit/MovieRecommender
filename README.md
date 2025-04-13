@@ -66,7 +66,12 @@ The Flash Recommender System is a high-performance, scalable recommendation engi
 **🏗️ CLI UI still under construction**  
 this is how to use ... 
 
-1. **Clone the repository:**
+1. **Clone the repository:** 
+    ```bash
+    git clone --recurse-submodule https://github.com/soot-bit/MovieRecommender.git`
+    git lfs pull
+    ```
+
 2. run `$ source build.sh`
 2. **Train the model or load trained matrices and vectors for making predictions:**
 3. **Make predictions:**
