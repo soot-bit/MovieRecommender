@@ -4,3 +4,6 @@
 [submodule "src/external/EigenRand"]
 	path = src/external/EigenRand
 	url = https://github.com/bab2min/EigenRand.git
+[submodule "src/external/libegen"]
+	path = src/external/libegen
+	url = https://gitlab.com/libeigen/eigen.git
