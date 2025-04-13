@@ -64,7 +64,7 @@ The Flash Recommender System is a high-performance, scalable recommendation engi
 
 ## Installation
 **🏗️ CLI UI still under construction**  
-To set up the recommender system, follow these steps:
+this is how to use ... 
 
 1. **Clone the repository:**
 2. run `$ source build.sh`
@@ -107,10 +107,11 @@ recommendations = model.predict(user_id=42, top_k=10)
 
 ###  Benchmarks
 
-| Operation         |  Python 🐢 + Numpy | Flash System ⚡| |
-|---|---|---|----| --- |
-| Matrix Factorization |  -   |  -   |   ***x100.1 boost***    |
-| Recommendation Batch |  -    | -  |    **2005.7x** |
+| Operation               | Python 🐢 + NumPy | Flash System ⚡ | Speed-up      |
+|------------------------|------------------|-----------------|---------------|
+| Matrix Factorization   | -                | -               | ***100.1×***  |
+| Recommendation Batch   | -                | -               | **2005.7×**   |
+
 *to be done properly*
 ---
 
@@ -120,28 +121,20 @@ recommendations = model.predict(user_id=42, top_k=10)
 <summary><h3>🧠 ALS algorithm</h3></summary>
   
 
-- **Alternating Updates**: Update $U \rightarrow V \rightarrow b_i \rightarrow b_j$ iteratively.
+- Update $U \rightarrow V \rightarrow b_i \rightarrow b_j$ iteratively.
  
- **User Vector $u_i$:**
+ **User Vector**
+$ u_i = \left( \lambda \sum_{j \in \Omega(i)} v_j v_j^T + \tau I \right)^{-1} \left( \lambda \sum_{j \in \Omega(i)} (r_{ij} - b_i - b_j) v_j \right) $
 
-   $$
-   u_i = \left( \lambda \sum_{j \in \Omega(i)} v_j v_j^T + \tau I \right)^{-1} \left( \lambda \sum_{j \in \Omega(i)} (r_{ij} - b_i - b_j) v_j \right)
-   $$
+   **Movie Vector**
+   $ v_j = \left( \lambda \sum_{i \in {\Omega}^{-1}(j)} u_i u_i^T + \tau I \right)^{-1} \left( \lambda \sum_{i \in {\Omega}^{-1}(j)} (r_{ij} - b_i - b_j) u_i \right) $
 
-   **Movie Vector $v_j$:**
-   $$
-   v_j = \left( \lambda \sum_{i \in {\Omega}^{-1}(j)} u_i u_i^T + \tau I \right)^{-1} \left( \lambda \sum_{i \in {\Omega}^{-1}(j)} (r_{ij} - b_i - b_j) u_i \right)
-   $$
 
-   **User Bias $b_i$:**
-   $$
-   b_i = \frac{\lambda \sum_{j \in \Omega(i)} \left(r_{ij} - u_i^T v_j - b_j\right)}{\lambda |\Omega(i)| + \gamma}
-   $$
+   **User Bias**
+   $ b_i = \frac{\lambda \sum_{j \in \Omega(i)} \left(r_{ij} - u_i^T v_j - b_j\right)}{\lambda |\Omega(i)| + \gamma} $
 
-  **Movie Bias $b_j$:**
-   $$
-   b_j = \frac{\lambda \sum_{i \in {\Omega}^{-1}(j)} \left(r_{ij} - u_i^T v_j - b_i\right)}{\lambda |{\Omega}^{-1}(j)| + \gamma}
-   $$
+  **Movie Bias**
+   $ b_j = \frac{\lambda \sum_{i \in {\Omega}^{-1}(j)} \left(r_{ij} - u_i^T v_j - b_i\right)}{\lambda |{\Omega}^{-1}(j)| + \gamma} $
 
 
 ##### **Key Notes:**
