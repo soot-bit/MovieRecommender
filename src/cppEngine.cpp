@@ -3,8 +3,6 @@
 #include <pybind11/eigen.h>
 
 #include <chrono>
-#include <indicators/cursor_control.hpp>
-#include <indicators/progress_bar.hpp>
 #include <thread>
 
 #include <Eigen/Dense>
@@ -15,8 +13,9 @@
 #include <tuple>
 #include <omp.h>
 
+#include <iostream>
+
 namespace py = pybind11;
-namespace ind = indicators;
 
 //------------------------------------------
 //      a Dstructure used for training
@@ -27,8 +26,6 @@ struct snapTensor {
     std::vector<std::vector<std::tuple<int, float>>> movie_train;
     std::vector<std::vector<std::tuple<int, float>>> user_test;
     std::vector<std::vector<std::tuple<int, float>>> movie_test;
-
-    int   uniq_users, uniq_items;
 
     void reshape(int n_users, int n_items) {
         user_train.resize(n_users);
@@ -182,14 +179,25 @@ private:
         );
     }
 
-    void show_progress(int iter, int total, const Metrics& metrics, ind::ProgressBar& bar) {
-        bar.set_option(ind::option::PostfixText{
-            "Loss: " + std::to_string(metrics.loss) +
-            " | Train RMSE: " + std::to_string(metrics.train_rmse) +
-            " | Test RMSE: " + std::to_string(metrics.test_rmse)
-        });
-        bar.set_progress(100 * (iter + 1) / total);
+    void show_progress(int iter, int total, const Metrics& metrics) {
+        const int width = 50;
+        const int progress = (iter + 1) * width / total;
+        
+        std::cout << "\r"  // Return to start of line
+                  << "Training [";
+        
+        // Progress bar
+        for (int i = 0; i < progress; i++) std::cout << "=";
+        for (int i = progress; i < width; i++) std::cout << " ";
+        
+        std::cout << "] " << (iter + 1) * 100 / total << "% "
+                  << "Loss: " << metrics.loss
+                  << " | Test: " << metrics.test_rmse
+                  << std::flush;
+        
+        if (iter + 1 == total) std::cout << std::endl;
     }
+
 
 public:
     ALS(int dim, float lambda_, float tau, float gamma)
@@ -212,38 +220,25 @@ public:
             item_bias = Eigen::VectorXf::Zero(num_items);
         }
 
-    std::vector<Metrics> fit(const snapTensor& data, int epochs = 10) {
-        initialize(data.user_train.size(), data.movie_train.size());
-        std::vector<Metrics> history;
-        
-        ind::ProgressBar bar{
-            ind::option::BarWidth{50},
-            ind::option::Start{"["},
-            ind::option::Fill{"█"},
-            ind::option::Lead{"█"},
-            ind::option::Remainder{"-"},
-            ind::option::End{"]"},
-            ind::option::ForegroundColor{ind::Color::green},
-            ind::option::ShowPercentage{true},
-            ind::option::ShowElapsedTime{true},
-            ind::option::ShowRemainingTime{true},
-            ind::option::PrefixText{"Training recommender 🎬"}
-        };
-
-        for(int iter = 0; iter < epochs; ++iter) {
-            
-            update_items(data);
-            update_users(data);
-            
-            Metrics metrics = compute_metrics(data);
-            history.push_back(metrics);
-            
-            show_progress(iter, epochs, metrics, bar);
+        std::vector<Metrics> fit(const snapTensor& data, int epochs = 10) {
+            initialize(data.user_train.size(), data.movie_train.size());
+            std::vector<Metrics> history;
+    
+            // init for Python output
+            std::cout << std::endl;
+    
+            for(int iter = 0; iter < epochs; ++iter) {
+                update_items(data);
+                update_users(data);
+                Metrics metrics = compute_metrics(data);
+                history.push_back(metrics);
+                show_progress(iter, epochs, metrics);
+            }
+    
+            // final clear prompt
+            std::cout << "\033[1A\033[K";  // move up and clear line
+            return history;
         }
-
-        bar.mark_as_completed();
-        return history;
-    }
 };
 
 PYBIND11_MODULE(cppEngine, m) {
@@ -252,8 +247,6 @@ PYBIND11_MODULE(cppEngine, m) {
         .def("reshape", &snapTensor::reshape)
         .def("add_train", &snapTensor::add_train)
         .def("add_test", &snapTensor::add_test)
-        .def_readwrite("uniq_users", &snapTensor::uniq_users)
-        .def_readwrite("uniq_items", &snapTensor::uniq_items)
         .def_readwrite("user_train", &snapTensor::user_train)
         .def_readwrite("movie_train", &snapTensor::movie_train)
         .def_readwrite("user_test", &snapTensor::user_test)

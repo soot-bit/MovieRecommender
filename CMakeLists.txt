@@ -16,7 +16,6 @@ target_compile_options(cppEngine PRIVATE -O3 -march=native) #those LLVMs
 target_include_directories(cppEngine PRIVATE
     ${EIGEN_INCLUDE_DIR}
     ${PROJECT_SOURCE_DIR}/src/external/EigenRand
-    ${PROJECT_SOURCE_DIR}/src/external/indicators/include
 )
 
 target_link_libraries(cppEngine PRIVATE OpenMP::OpenMP_CXX pybind11::module)
