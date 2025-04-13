@@ -3,16 +3,17 @@ import numpy as np
 from pathlib import Path
 from tqdm.auto import tqdm
 from sklearn.model_selection import train_test_split
-import cppEngine.snapTensor
+import cppEngine
 
 
 
-class SnapIndex:
+class DataIndx:
     """
-    Data indexer and processor for fast retrieval in trainig ALS with O(1)
-    look ups to efficient handle sparse matrices sparcity of the data
+    Data Indexing structure and processor for fast retrieval in trainig ALS 
+    with O(1) look ups to efficient handle sparse matrices sparcity of the data
     
-    Handles:
+    Does:
+    - very clever memory management to avoid duplicating snapTensor
     - Data loading and index mappings for users/movies
     - Feature engineering for movies
     - Train-test splitting with per-user stratification
@@ -23,6 +24,7 @@ class SnapIndex:
     """
     def __init__(self, dataset):
         self.ds_dir = Path("Data") / dataset
+        self._snap_tensor = cppEngine.snapTensor()  # Init cpp data structures for used in trainig
         self._load_csv()
         self._create_mappings()
         
@@ -68,12 +70,10 @@ class SnapIndex:
         self.idx_to_movie = unique_movies.tolist()
 
     def tt_split(self, test_size=0.2, random_state=42):
-        self.snap_tensor = cppEngine.snapTensor() # Init cpp data structures for used in trainig
         num_users = len(self.idx_to_user)
         num_movies = len(self.idx_to_movie)
         
-        self.snap_tensor.resize_users(num_users)
-        self.snap_tensor.resize_movies(num_movies)
+        self.snap_tensor.reshape(num_users, num_movies)
 
         #  train/test masks
         train_mask = np.zeros(len(self.ratings), dtype=bool)
@@ -89,10 +89,12 @@ class SnapIndex:
             rating = row['rating']
             
             if train_mask[idx]:
-                self.snap_tensor.add_test_rating(user_idx, movie_idx, rating)
+                self.snap_tensor.add_test(user_idx, movie_idx, rating)
             else:
-                self.snap_tensor.add_train_rating(user_idx, movie_idx, rating)
-
+                self.snap_tensor.add_train(user_idx, movie_idx, rating)
+    @property
+    def snap_tensor(self):
+        return self._snap_tensor
 
     def _process_features(self):
         """Process features with progress tracking"""
