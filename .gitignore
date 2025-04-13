@@ -1,4 +1,4 @@
-Data/
+Data/*
 !Data/ml-latest-small/
 !Data/ml-latest-small/*
 

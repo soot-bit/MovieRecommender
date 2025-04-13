@@ -70,6 +70,7 @@ this is how to use ...
     ```bash
     git clone --recurse-submodule https://github.com/soot-bit/MovieRecommender.git`
     git lfs pull
+    pip install "pybind11[global]"
     ```
 
 2. run `$ source build.sh`

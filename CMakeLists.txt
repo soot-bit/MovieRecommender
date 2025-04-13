@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 project(recsys)
 
-set(EIGEN_INCLUDE_DIR /home/soot/Code/Projects/MovieRecommender/src/external/libegen)
+set(EIGEN_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src/external/libegen)
 
 
 find_package(Python COMPONENTS Interpreter Development REQUIRED)
