@@ -235,8 +235,6 @@ public:
                 show_progress(iter, epochs, metrics);
             }
     
-            // final clear prompt
-            std::cout << "\033[1A\033[K";  // move up and clear line
             return history;
         }
 };
