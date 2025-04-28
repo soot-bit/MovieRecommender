@@ -3,7 +3,20 @@ import numpy as np
 from pathlib import Path
 from tqdm.auto import tqdm
 from sklearn.model_selection import train_test_split
-import cppEngine
+
+try:
+    import cppEngine
+except ImportError:
+    import sys
+    from pathlib import Path
+    build_dir = Path(__file__).parent.parent / "build"  
+
+    if build_dir.exists() and build_dir not in sys.path:
+        sys.path.append(str(build_dir))  # Ensure build_dir is added as a string
+    try:
+        import cppEngine
+    except ImportError:
+        raise ImportError("Build the cppEngine with build.sh")
 
 
 

@@ -13,9 +13,7 @@
 
 
 <p align="center">
-  <a href="#----">
-    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=30&duration=2800&pause=1000&color=22D3EE&center=true&vCenter=true&width=800&height=50&lines=%F0%9F%94%A5+Lightning-Fast+Recommender+System+%F0%9F%94%A5;Python+%E2%86%BA%C2%A0%C2%A0C%2B%2B+Accelerated+Computing+%F0%9F%9A%80;Enterprise-grade+Performance+%E2%9C%A8" alt="Animated Header">
-  </a>
+  <a href="https://git.io/typing-svg"><img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=25&pause=1500&random=true&width=435&lines=super+fast+training+speeds+;easily+train+in+python+;+++%F0%9F%97%B2+%F0%9F%97%B2+++FLASH+RECOMMENDER+%F0%9F%97%B2+%F0%9F%97%B2;%F0%9F%87%A8%E2%9E%95%E2%9E%95+back-end+%F0%9F%8F%8E%EF%B8%8F" alt="Typing SVG" /></a>
 </p>
 
 
@@ -58,7 +56,6 @@ The Flash Recommender System is a high-performance, scalable recommendation engi
 ## Features
 - Compiled with Clang LLVM’s optimisations - aggressive inlining, loop unrolling, auto-vectorisation, ... 
 - cpp backend uses Eigen, a highly optimised library for matrix algebra — fast Cholesky decomposition and other linear algebra routines.
-- Integrates xtensor for custom array structures with seamless Python interoperability.
 - OpenMP threading for parallelism, enabling shared-memory multithreading with dynamic workload balancing.
 
 
@@ -66,11 +63,12 @@ The Flash Recommender System is a high-performance, scalable recommendation engi
 **🏗️ CLI UI still under construction**  
 this is how to use ... 
 
+your system needs `python3-dev git-lfs cmake unzip axel` and a compiler with LLVM toolchain `sudo [pkg] install clang lldb lld libomp-dev` 
 1. **Clone the repository:** 
     ```bash
-    git clone --recurse-submodule https://github.com/soot-bit/MovieRecommender.git`
+    git clone --recurse-submodule https://github.com/soot-bit/MovieRecommender.git
     git lfs pull
-    pip install "pybind11[global]"
+    pip install -U "pybind11[global]" pandas scikit-learn matplotlib numpy tqdm
     ```
 
 2. run `$ source build.sh`
@@ -79,7 +77,7 @@ this is how to use ...
 
 
 
-to download the the 25 Million Users large data set run 
+to download the the full datasets yourself Million Users large data set run bypass `git lfs pull`
 ```bash
 $ > ./download_ds.sh
 ```
