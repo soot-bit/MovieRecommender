@@ -1,6 +1,8 @@
 Data/*
 !Data/ml-latest-small/
 !Data/ml-latest-small/*
+!Data/ml-latest/
+!Data/ml-latest/*
 
 Report/
 **/__pycache__
