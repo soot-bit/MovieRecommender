@@ -3,6 +3,9 @@ import numpy as np
 from pathlib import Path
 from tqdm.auto import tqdm
 from sklearn.model_selection import train_test_split
+import pickle
+from rich.console import Console
+console = Console()
 
 try:
     import cppEngine
@@ -11,8 +14,8 @@ except ImportError:
     from pathlib import Path
     build_dir = Path(__file__).parent.parent / "build"  
 
-    if build_dir.exists() and build_dir not in sys.path:
-        sys.path.append(str(build_dir))  # Ensure build_dir is added as a string
+    if build_dir.exists() and str(build_dir) not in sys.path:
+        sys.path.append(str(build_dir))
     try:
         import cppEngine
     except ImportError:
@@ -22,80 +25,103 @@ except ImportError:
 
 class DataIndx:
     """
-    Data Indexing structure and processor for fast retrieval in trainig ALS 
-    with O(1) look ups to efficient handle sparse matrices sparcity of the data
-    
-    Does:
-    - very clever memory management to avoid duplicating snapTensor
-    - Data loading and index mappings for users/movies
-    - Feature engineering for movies
-    - Train-test splitting with per-user stratification
-    - O(1) retrival to user/movie ratings
+    Data Indexing structure and processor for fast retrieval in training ALS
+    with O(1) lookups to efficiently handle sparse matrix sparsity of the data
 
-    arg:
-        --- dataset : the dataset directory (ml-latest or ml-latest-small)
+    Features:
+    - smart memory management
+    - fast indexing
+    - t-t split with per-user stratification & good sampling per user
+    - caching for large datasets (e.g. ml-latest)
     """
-    def __init__(self, dataset):
+
+    CACHE_FILE = "dataindx_cache.pkl"
+
+    def __init__(self, dataset, cache=True):
         self.ds_dir = Path("Data") / dataset
-        self._snap_tensor = cppEngine.snapTensor()  # Init cpp data structures for used in trainig
-        self._load_csv()
-        self._create_mappings()
+        self.cache_path = self.ds_dir / self.CACHE_FILE
+
+        # init mappings
+        self.user_to_idx = None
+        self.movie_to_idx = None
+        self.idx_to_user = None
+        self.idx_to_movie = None
+        self.movie_to_features = {}
+        self._snap_tensor = cppEngine.snapTensor()
+
+        if cache and self.cache_path.exists():
+            console.rule(f"[+] Loading cached data_indx")
+            self._unserialize()
+        else: 
+            self._load_csv()
+            self._create_mappings()
+            self.tt_split()
+            self._process_features()
+            if cache:
+                console.rule("[!] caching")
+                self._cache()
+
+
+    def _cache(self):
+        state = {
+            'user_to_idx': self.user_to_idx,
+            'idx_to_user': self.idx_to_user,
+            'movie_to_idx': self.movie_to_idx,
+            'idx_to_movie': self.idx_to_movie,
+            'movie_to_features': self.movie_to_features,
+            'snap_tensor': self._snap_tensor 
+        }
         
+        with open(self.cache_path, 'wb') as f:
+            pickle.dump(state, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def _unserialize(self):
+        with open(self.cache_path, 'rb') as f:
+            state = pickle.load(f)
+        
+        self._snap_tensor = state['snap_tensor']
+        
+        self.user_to_idx = state['user_to_idx']
+        self.idx_to_user = state['idx_to_user']
+        self.movie_to_idx = state['movie_to_idx']
+        self.idx_to_movie = state['idx_to_movie']
+        self.movie_to_features = state.get('movie_to_features', {})
+
     def _load_csv(self):
         self.ratings = pd.read_csv(
-                            self.ds_dir / "ratings.csv",
-                            dtype={
-                                'userId': 'int32', 
-                                'movieId': 'int32', 
-                                'rating': 'float32'
-                                }
-                            )
-        self.movies = pd.read_csv(  
-                                    self.ds_dir / "movies.csv",
-                                    dtype={'movieId': 'int32'}
-                        )
+            self.ds_dir / "ratings.csv",
+            dtype={'userId': 'int32', 'movieId': 'int32', 'rating': 'float32'}
+        )
+        self.movies = pd.read_csv(
+            self.ds_dir / "movies.csv",
+            dtype={'movieId': 'int32'}
+        )
         self.tags = pd.read_csv(
             self.ds_dir / "tags.csv",
             dtype={'userId': 'int32', 'movieId': 'int32', 'tag': 'string'}
         )
 
     def _create_mappings(self):
-        """
-        Creates bidirectional mappings between user IDs and movie IDs to 
-        their corresponding index values. O(1) time complexity and O(n) space
-
-        
-        - `user_to_idx` Dic: mapping unique `userId` in the dataset to a 
-                             unique integer index (row) of in the snapTensor 
-        - `idx_to_user` List: A list of user IDs, where each index corresponds 
-                            to a user in the `user_to_idx` mapping.
-        - `movie_to_idx` Dic: A dictionary mapping each unique `movieId` to a 
-                              unique integer index.
-        - `idx_to_movie`List: A list of movie IDs, where each index corresponds
-                              to a movie in the `movie_to_idx` mapping.
-        """
+        """bidirectional maps between IDs and indices"""
         unique_users = self.ratings['userId'].unique()
         unique_movies = self.ratings['movieId'].unique()
-        
+
         self.user_to_idx = {u: i for i, u in enumerate(unique_users)}
         self.idx_to_user = unique_users.tolist()
         self.movie_to_idx = {m: i for i, m in enumerate(unique_movies)}
         self.idx_to_movie = unique_movies.tolist()
 
     def tt_split(self, test_size=0.2, random_state=42):
+        """Train/test split"""
         num_users = len(self.idx_to_user)
         num_movies = len(self.idx_to_movie)
-        
-        self.snap_tensor.reshape(num_users, num_movies)
+        self._snap_tensor.reshape(num_users, num_movies)
 
-        # Initialize train/test mask
         train_mask = np.zeros(len(self.ratings), dtype=bool)
 
-        # Iterate over each user's ratings
-        for _, group in self.ratings.groupby('userId'):
+        for _, group in tqdm(self.ratings.groupby('userId'), desc="Splitting train/test", leave=False):
             idx = group.index
             if len(idx) >= 2:
-                # Split only if user has at least 2 ratings
                 _, test_idx = train_test_split(
                     idx,
                     test_size=test_size,
@@ -103,29 +129,26 @@ class DataIndx:
                 )
                 train_mask[test_idx] = True
 
-        # Populate the snapTensor with train and test ratings
-        for idx, row in self.ratings.iterrows():
-            user_idx = self.user_to_idx[row['userId']]
-            movie_idx = self.movie_to_idx[row['movieId']]
+        for idx, row in tqdm(self.ratings.iterrows(), total=len(self.ratings), desc="Populating tensor", leave=False):
+            u_idx = self.user_to_idx[row['userId']]
+            m_idx = self.movie_to_idx[row['movieId']]
             rating = row['rating']
 
             if train_mask[idx]:
-                self.snap_tensor.add_test(user_idx, movie_idx, rating)
+                self._snap_tensor.add_test(u_idx, m_idx, rating)
             else:
-                self.snap_tensor.add_train(user_idx, movie_idx, rating)
-    
+                self._snap_tensor.add_train(u_idx, m_idx, rating)
+
     @property
     def snap_tensor(self):
-        return self._snap_tensor
+        return self._snap_tensor # extra measure to avoid creating duplicate, 
 
     def _process_features(self):
-        """Process features with progress tracking"""
-        #  tags
-        self.movie_to_features = {} #{movieId -> Action|blah 1|blah 2}
+        """movie features with tags and genres"""
         tag_features = self.tags.groupby('movieId')['tag'].agg(list)
-        
-        
-        for movie_id in tqdm(self.idx_to_movie, desc="Processing features"):
+        self.movie_to_features = {}
+
+        for movie_id in tqdm(self.idx_to_movie, desc="Processing features", leave=False):
             movie_data = self.movies[self.movies['movieId'] == movie_id].iloc[0]
             features = {
                 'title': movie_data['title'],
@@ -135,7 +158,7 @@ class DataIndx:
             self.movie_to_features[movie_id] = features
 
     def get_features(self, movie_id):
-        """Get features with type checking"""
+        """Get features safely"""
         return self.movie_to_features.get(int(movie_id), {
             'title': 'Unknown',
             'genres': [],

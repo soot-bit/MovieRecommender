@@ -245,10 +245,32 @@ PYBIND11_MODULE(cppEngine, m) {
         .def("reshape", &snapTensor::reshape)
         .def("add_train", &snapTensor::add_train)
         .def("add_test", &snapTensor::add_test)
-        .def_readwrite("user_train", &snapTensor::user_train)
-        .def_readwrite("movie_train", &snapTensor::movie_train)
-        .def_readwrite("user_test", &snapTensor::user_test)
-        .def_readwrite("movie_test", &snapTensor::movie_test);
+        .def_readonly("user_train", &snapTensor::user_train)
+        .def_readonly("movie_train", &snapTensor::movie_train)
+        .def_readonly("user_test", &snapTensor::user_test)
+        .def_readonly("movie_test", &snapTensor::movie_test)
+        .def(py::pickle(
+            [](const snapTensor& t) { // __getstate__
+                return py::make_tuple(
+                    t.user_train,
+                    t.movie_train,
+                    t.user_test,
+                    t.movie_test
+                );
+            },
+            [](py::tuple t) { // __setstate__
+                if (t.size() != 4) 
+                    throw std::runtime_error("Invalid state!");
+                
+                snapTensor st;
+                st.user_train = t[0].cast<decltype(st.user_train)>();
+                st.movie_train = t[1].cast<decltype(st.movie_train)>();
+                st.user_test = t[2].cast<decltype(st.user_test)>();
+                st.movie_test = t[3].cast<decltype(st.movie_test)>();
+                return st;
+            }
+        ));
+
 
     py::class_<ALS>(m, "ALS")
         .def(py::init<int, float, float, float>(),

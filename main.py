@@ -33,7 +33,6 @@ def main():
 
 
     di = DataIndx(dataset=args.dataset) 
-    di.tt_split()
     snap_t = di.snap_tensor
 
     if args.tune:
