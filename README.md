@@ -68,7 +68,7 @@ your system needs `python3-dev git-lfs cmake unzip axel` and a compiler with LLV
     ```bash
     git clone --recurse-submodule https://github.com/soot-bit/MovieRecommender.git
     git lfs pull
-    pip install -U "pybind11[global]" pandas scikit-learn matplotlib numpy tqdm optuna
+    pip install -U "pybind11[global]" tqdm optuna
     ```
 
 2. run `$ source build.sh`

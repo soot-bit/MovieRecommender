@@ -16,7 +16,7 @@ except ImportError:
     try:
         import cppEngine
     except ImportError:
-        raise ImportError("Build the cppEngine with build.sh")
+        raise ImportError("Build the cppEngine modules with build.sh")
 
 
 
@@ -88,23 +88,32 @@ class DataIndx:
         
         self.snap_tensor.reshape(num_users, num_movies)
 
-        #  train/test masks
+        # Initialize train/test mask
         train_mask = np.zeros(len(self.ratings), dtype=bool)
+
+        # Iterate over each user's ratings
         for _, group in self.ratings.groupby('userId'):
             idx = group.index
-            _, test_idx = train_test_split(idx, test_size=test_size, random_state=random_state)
-            train_mask[test_idx] = True
+            if len(idx) >= 2:
+                # Split only if user has at least 2 ratings
+                _, test_idx = train_test_split(
+                    idx,
+                    test_size=test_size,
+                    random_state=random_state
+                )
+                train_mask[test_idx] = True
 
-        # Populate  snap tensor
+        # Populate the snapTensor with train and test ratings
         for idx, row in self.ratings.iterrows():
             user_idx = self.user_to_idx[row['userId']]
             movie_idx = self.movie_to_idx[row['movieId']]
             rating = row['rating']
-            
+
             if train_mask[idx]:
                 self.snap_tensor.add_test(user_idx, movie_idx, rating)
             else:
                 self.snap_tensor.add_train(user_idx, movie_idx, rating)
+    
     @property
     def snap_tensor(self):
         return self._snap_tensor
