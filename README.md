@@ -117,9 +117,93 @@ recommendations = model.predict(user_id=42, top_k=10)
 | Recommendation Batch   | -                | -               | **2005.7×**   |
 
 *to be done properly*
----
+
 
 ![trainloss](results/100ktrain.png)
+
+
+## **Recipies**
+
+
+<div style="text-align: left;">
+
+### Using [`DataIndx`](./src/data.py)
+
+This class provides a very efficient way to index and preprocess user-movie ratings data for training recommendation models ALS.  
+It has:
+- very clever memory management to avoid duplicating snapTensor  
+- Data loading and index mappings for users/movies  
+- Feature engineering for movies  
+- Train-test splitting with per-user stratification  
+- *O(1)* retrieval of user/movie ratings  
+- efficient sampling of per-user ratings using sklearn `train_test_split`
+
+**arg:**
+- `dataset`: the path to the data("ml-latest" 25 M or "ml-latest-small" 100K)
+
+</div>
+
+
+**Initialization**
+
+```python
+from src.data import DataIndx  
+
+# Load dataset (e.g., ml-latest or ml-latest-small)
+data = DataIndx("ml-latest", cache=True)
+```
+<div style="text-align: left;">
+By default, this will:
+
+- Load the dataset from `Data/ml-latest/`
+- Create user/movie ID mappings
+- Perform a stratified train/test split
+- Caches all processed data to disk (cache only the large dataset) 
+
+
+You can access core components of the class after initialization:
+
+```python
+print(data.ratings.head())         # Raw ratings DataFrame
+print(len(data.idx_to_user))       # Total number of unique users
+print(len(data.idx_to_movie))      # Total number of unique movies
+
+# Get internal tensor for ALS training
+tensor = data.snap_tensor
+```
+
+The tensor has methods:
+- `.add_train(user_idx, movie_idx, rating)`
+- `.add_test(user_idx, movie_idx, rating)`
+- Use with your ALS trainer directly
+
+
+ **🏷️ Get Movie Features**
+
+```python
+movie_id = 123
+features = data.get_features(movie_id)
+print(features)
+
+# Output example:
+# {
+#     'title': 'Toy Story (1995)',
+#     'genres': ['Animation', 'Children', 'Comedy'],
+#     'tags': ['Pixar', 'funny', 'great animation']
+# }
+```
+
+
+
+The Data directory should look something like..
+```
+Data/
+└── ml-latest/
+    ├── ratings.csv
+    ├── movies.csv
+    └── tags.csv
+```
+</div>
 
 <details>
 <summary><h3>🧠 ALS algorithm</h3></summary>
