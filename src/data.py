@@ -35,11 +35,12 @@ class DataIndx:
     - caching for large datasets (e.g. ml-latest)
     """
 
-    CACHE_FILE = "dataindx_cache.pkl"
+    CACHE_FILE = "mappings.pkl"
 
     def __init__(self, dataset, cache=True):
         self.ds_dir = Path("Data") / dataset
-        self.cache_path = self.ds_dir / self.CACHE_FILE
+        self.mappings_path = self.ds_dir / self.CACHE_FILE
+        self.tensor_path = self.ds_dir / "tensor.bin"
 
         # init mappings
         self.user_to_idx = None
@@ -49,7 +50,7 @@ class DataIndx:
         self.movie_to_features = {}
         self._snap_tensor = cppEngine.snapTensor()
 
-        if cache and self.cache_path.exists():
+        if cache and self.mappings_path.exists() and self.tensor_path.exists():
             console.rule(f"[+] Loading cached data_indx")
             self._unserialize()
         else: 
@@ -69,23 +70,34 @@ class DataIndx:
             'movie_to_idx': self.movie_to_idx,
             'idx_to_movie': self.idx_to_movie,
             'movie_to_features': self.movie_to_features,
-            'snap_tensor': self._snap_tensor 
         }
         
-        with open(self.cache_path, 'wb') as f:
-            pickle.dump(state, f, protocol=pickle.HIGHEST_PROTOCOL)
+        
+        # save tensor first
+        self._snap_tensor.save(str(self.tensor_path))
+        
+        # collect garbage
+        del self.ratings
+        del self.movies
+        del self.tags
+        import gc
+        gc.collect()
+
+        # save mappings
+        with open(self.mappings_path, 'wb') as f:
+            pickle.dump(state, f, protocol=5)
 
     def _unserialize(self):
-        with open(self.cache_path, 'rb') as f:
+        with open(self.mappings_path, 'rb') as f:
             state = pickle.load(f)
-        
-        self._snap_tensor = state['snap_tensor']
         
         self.user_to_idx = state['user_to_idx']
         self.idx_to_user = state['idx_to_user']
         self.movie_to_idx = state['movie_to_idx']
         self.idx_to_movie = state['idx_to_movie']
         self.movie_to_features = state.get('movie_to_features', {})
+
+        self._snap_tensor.load(str(self.tensor_path))
 
     def _load_csv(self):
         self.ratings = pd.read_csv(

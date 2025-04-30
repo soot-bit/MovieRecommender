@@ -15,6 +15,10 @@
 
 #include <iostream>
 
+#include <cereal/archives/binary.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/tuple.hpp>
+
 namespace py = pybind11;
 
 //------------------------------------------
@@ -42,6 +46,26 @@ struct snapTensor {
     void add_test(int user, int item, float rating) {
         user_test[user].emplace_back(item, rating);
         movie_test[item].emplace_back(user, rating);
+    }
+
+
+     // serialization
+     template <class Archive>
+     void serialize(Archive& archive) {
+         archive(user_train, movie_train, user_test, movie_test);
+     }
+ 
+     
+    void save(const std::string& filename) {
+        std::ofstream ofs(filename, std::ios::binary);
+        cereal::BinaryOutputArchive archive(ofs);
+        archive(*this);
+    }
+
+    void load(const std::string& filename) {
+        std::ifstream ifs(filename, std::ios::binary);
+        cereal::BinaryInputArchive archive(ifs);
+        archive(*this);
     }
 };
 
@@ -242,34 +266,19 @@ public:
 PYBIND11_MODULE(cppEngine, m) {
     py::class_<snapTensor>(m, "snapTensor")
         .def(py::init<>())
+
         .def("reshape", &snapTensor::reshape)
         .def("add_train", &snapTensor::add_train)
         .def("add_test", &snapTensor::add_test)
+
+        .def("save", &snapTensor::save)
+        .def("load", &snapTensor::load)
+        
         .def_readonly("user_train", &snapTensor::user_train)
         .def_readonly("movie_train", &snapTensor::movie_train)
         .def_readonly("user_test", &snapTensor::user_test)
-        .def_readonly("movie_test", &snapTensor::movie_test)
-        .def(py::pickle(
-            [](const snapTensor& t) { // __getstate__
-                return py::make_tuple(
-                    t.user_train,
-                    t.movie_train,
-                    t.user_test,
-                    t.movie_test
-                );
-            },
-            [](py::tuple t) { // __setstate__
-                if (t.size() != 4) 
-                    throw std::runtime_error("Invalid state!");
-                
-                snapTensor st;
-                st.user_train = t[0].cast<decltype(st.user_train)>();
-                st.movie_train = t[1].cast<decltype(st.movie_train)>();
-                st.user_test = t[2].cast<decltype(st.user_test)>();
-                st.movie_test = t[3].cast<decltype(st.movie_test)>();
-                return st;
-            }
-        ));
+        .def_readonly("movie_test", &snapTensor::movie_test);
+        
 
 
     py::class_<ALS>(m, "ALS")
