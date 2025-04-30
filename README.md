@@ -121,6 +121,7 @@ recommendations = model.predict(user_id=42, top_k=10)
 
 ![trainloss](results/100ktrain.png)
 
+</div>
 
 ## **Recipies**
 
@@ -205,7 +206,8 @@ Data/
 ```
 </div>
 
-<details>
+
+<div align="center"><details>
 <summary><h3>🧠 ALS algorithm</h3></summary>
   
 

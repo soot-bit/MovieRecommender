@@ -4,7 +4,9 @@ from src.als_py import optALS
 import argparse
 from src.utils import *
 import optuna
-from rich import print
+import time
+from rich.console import Console
+console = Console()
 
 def main():
     parser = argparse.ArgumentParser(description="ALS Recommender System")
@@ -36,6 +38,7 @@ def main():
     snap_t = di.snap_tensor
 
     if args.tune:
+        console.rule("[!] Optuna tuning")
         def objective(trial):
             
             lambda_ = trial.suggest_float('lambda_', 1e-5, 1.0, log=True)
@@ -68,14 +71,24 @@ def main():
 
 
     if args.flash:
+        s = time.time()
+        print()
+        console.rule("[⚡] Training")
         model = cppEngine.ALS(dim=10, lambda_=0.01, tau=0.1, gamma=0.1)
         history = model.fit(snap_t, epochs=args.epochs)
+        e = time.time()
+        console.rule(f"[⌛]: {e-s:.2f} sec")
         if args.plot:
             view((process(history)))
-    else:
-        print("🐍")
+
+    else:  
+        print()
+        console.rule("[🐍] Training")
+        s = time.time()
         model = optALS(snap_t, dim=10, lambda_=5.47e-5, tau=0.00159, gamma=5.8e-5) 
         metrics = Trainer.fit(model, epochs=args.epochs)
+        e = time.time()
+        console.rule(f"[⌛]: {e-s:.2f} sec")
         if args.plot:
             view(metrics)
 
